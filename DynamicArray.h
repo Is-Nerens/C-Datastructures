@@ -19,6 +19,12 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+#pragma once
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <string.h>
+
 typedef struct DynamicArray
 {
     void* data;  
@@ -27,7 +33,7 @@ typedef struct DynamicArray
     uint32_t capacity; 
 } DynamicArray; 
 
-void DynamicArrayInit (DynamicArray* arr, uint32_t elementSize, uint32_t initialCapacity) 
+void DynamicArrayInit(DynamicArray* arr, uint32_t elementSize, uint32_t initialCapacity) 
 {
     arr->data = malloc(initialCapacity * elementSize);
     arr->elementSize = elementSize;
@@ -72,8 +78,23 @@ void DynamicArrayDeleteBackfill(DynamicArray* array, uint32_t index)
         return;
     }
     void* target = (char*)array->data + (index * array->elementSize);
-    void* last   = (char*)array->data + ((array->size - 1) * array->elementSize);
+    void* last = (char*)array->data + ((array->size - 1) * array->elementSize);
     memcpy(target, last, array->elementSize);
+    array->size--;
+}
+
+void DynamicArrayDeleteBackshift(DynamicArray* array, uint32_t index)
+{
+    if (index >= array->size) {
+        return;
+    }
+    if (index < array->size-1)
+    {
+        void* dest = (char*)array->data + (index * array->elementSize);
+        void* src = (char*)array->data + ((index + 1) * array->elementSize);
+        uint32_t bytesToMove = (array->size - index - 1) * array->elementSize;
+        memmove(dest, src, bytesToMove);
+    }
     array->size--;
 }
 
@@ -95,5 +116,4 @@ inline void DynamicArrayFree(DynamicArray* array)
     free(array->data);
     array->size = array->capacity = 0;
     array->data = NULL;
-
 }
