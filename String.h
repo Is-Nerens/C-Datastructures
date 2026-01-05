@@ -1,23 +1,39 @@
+// MIT License
+// Copyright (c) 2026 Arran Stevens
+
+// Permission is hereby granted, free of charge, to any person obtaining a copy
+// of this software and associated documentation files (the "Software"), to deal
+// in the Software without restriction, including without limitation the rights
+// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+// copies of the Software, and to permit persons to whom the Software is
+// furnished to do so, subject to the following conditions:
+
+// The above copyright notice and this permission notice shall be included in all
+// copies or substantial portions of the Software.
+
+// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+// SOFTWARE.
+
+
+
+// DATA LAYOUT
+// ASCII/UTF8 [length: 3 bytes][encoding: 1 byte][data][\n]
+// UTF32      [header: 3 bytes][encoding: 1 byte][data]
+
 #pragma once
 #include <stdint.h>
 #include <string.h>
+
 
 typedef char* String;
 #define ASCII  0x01  // 00000001
 #define UTF8   0x02  // 00000010
 #define UTF32  0x03  // 00000011
-
-inline char* StringCstr(String str)
-{
-    return str + 4;
-}
-
-inline uint32_t StringLen(String string)
-{
-    return ((uint32_t)(unsigned char)string[0] << 16) |
-           ((uint32_t)(unsigned char)string[1] << 8) |
-           ((uint32_t)(unsigned char)string[2]);
-}
 
 String StringCreate(char* str)
 {
@@ -25,7 +41,6 @@ String StringCreate(char* str)
     String result = malloc(length + 4 + 1);
     if (!result) return NULL;
     memcpy(result + 4, str, length);
-    // write metadata into first 4 bytes [length 3][encoding 1]
     result[0] = (length >> 16) & 0xFF;
     result[1] = (length >> 8) & 0xFF;
     result[2] = length & 0xFF;  
@@ -40,7 +55,6 @@ String StringCreateUTF8(char* str)
     String result = malloc(length + 4 + 1);
     if (!result) return NULL;
     memcpy(result + 4, str, length);
-    // write metadata into first 4 bytes [length 3][encoding 1]
     result[0] = (length >> 16) & 0xFF;
     result[1] = (length >> 8) & 0xFF;
     result[2] = length & 0xFF;  
@@ -57,42 +71,54 @@ inline void StringFree(String* str)
     }
 }
 
-uint32_t GetNextUTF8Codepoint(String string, int* i)
+inline char* StringCstr(String str)
+{
+    return str + 4;
+}
+
+inline uint32_t StringLen(String string)
+{
+    return ((uint32_t)(unsigned char)string[0] << 16) |
+           ((uint32_t)(unsigned char)string[1] << 8) |
+           ((uint32_t)(unsigned char)string[2]);
+}
+
+uint32_t GetNextUTF8Codepoint(String string, int* byteOffset)
 {
     char* cstr = StringCstr(string);
     uint32_t stringLen = StringLen(string);
     uint32_t codepoint = 0;
-    unsigned char firstByte = (unsigned char)cstr[*i];
+    unsigned char firstByte = (unsigned char)cstr[*byteOffset];
 
     if ((firstByte & 0x80) == 0) {
         codepoint = firstByte;
-        *i += 1;
+        *byteOffset += 1;
     }
-    else if (*i + 1 < stringLen && (firstByte & 0xE0) == 0xC0) {
+    else if (*byteOffset + 1 < stringLen && (firstByte & 0xE0) == 0xC0) {
         codepoint = (firstByte & 0x1F) << 6;
-        codepoint |= (unsigned char)(cstr[*i + 1] & 0x3F);
-        *i += 2;
+        codepoint |= (unsigned char)(cstr[*byteOffset + 1] & 0x3F);
+        *byteOffset += 2;
     }
-    else if (*i + 2 < stringLen && (firstByte & 0xF0) == 0xE0) {
+    else if (*byteOffset + 2 < stringLen && (firstByte & 0xF0) == 0xE0) {
         codepoint = (firstByte & 0x0F) << 12;
-        codepoint |= (unsigned char)(cstr[*i + 1] & 0x3F) << 6;
-        codepoint |= (unsigned char)(cstr[*i + 2] & 0x3F);
-        *i += 3;
+        codepoint |= (unsigned char)(cstr[*byteOffset + 1] & 0x3F) << 6;
+        codepoint |= (unsigned char)(cstr[*byteOffset + 2] & 0x3F);
+        *byteOffset += 3;
     }
-    else if (*i + 3 < stringLen && (firstByte & 0xF8) == 0xF0) {
+    else if (*byteOffset + 3 < stringLen && (firstByte & 0xF8) == 0xF0) {
         codepoint = (firstByte & 0x07) << 18;
-        codepoint |= (unsigned char)(cstr[*i + 1] & 0x3F) << 12;
-        codepoint |= (unsigned char)(cstr[*i + 2] & 0x3F) << 6;
-        codepoint |= (unsigned char)(cstr[*i + 3] & 0x3F);
-        *i += 4;
+        codepoint |= (unsigned char)(cstr[*byteOffset + 1] & 0x3F) << 12;
+        codepoint |= (unsigned char)(cstr[*byteOffset + 2] & 0x3F) << 6;
+        codepoint |= (unsigned char)(cstr[*byteOffset + 3] & 0x3F);
+        *byteOffset += 4;
     }
     return codepoint;
 } 
 
-inline uint32_t GetUTF32Codepoint(String string, int i) 
+inline uint32_t GetUTF32Codepoint(String string, int index) 
 {
     uint32_t codepoint;
-    memcpy(&codepoint, StringCstr(string) + i * 4, 4);
+    memcpy(&codepoint, StringCstr(string) + index * 4, 4);
     return codepoint;
 }
 
