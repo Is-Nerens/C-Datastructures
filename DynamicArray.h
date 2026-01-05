@@ -98,13 +98,43 @@ void DynamicArrayDeleteBackshift(DynamicArray* array, uint32_t index)
     array->size--;
 }
 
+void DynamicArrayDeleteBackfillSafe(DynamicArray* array, uint32_t index)
+{
+    if (index == array->size - 1) {
+        array->size--;
+        return;
+    }
+    void* target = (char*)array->data + (index * array->elementSize);
+    void* last = (char*)array->data + ((array->size - 1) * array->elementSize);
+    memcpy(target, last, array->elementSize);
+    array->size--;
+}
+
+void DynamicArrayDeleteBackshiftSafe(DynamicArray* array, uint32_t index)
+{
+    if (index < array->size-1)
+    {
+        void* dest = (char*)array->data + (index * array->elementSize);
+        void* src = (char*)array->data + ((index + 1) * array->elementSize);
+        uint32_t bytesToMove = (array->size - index - 1) * array->elementSize;
+        memmove(dest, src, bytesToMove);
+    }
+    array->size--;
+}
+
 inline void* DynamicArrayGet(DynamicArray* array, uint32_t index) 
+{
+    return (char*)array->data + (index * array->elementSize);
+}
+
+inline void* DynamicArrayGetSafe(DynamicArray* array, uint32_t index) 
 {
     if (index >= array->size) {
         return NULL;
     }
     return (char*)array->data + (index * array->elementSize);
 }
+
 
 inline void DynamicArrayClear(DynamicArray* array)
 {
