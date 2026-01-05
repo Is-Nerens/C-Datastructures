@@ -19,13 +19,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-#pragma once
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-// ------------------------------------
-// --- Import -------------------------
-// ------------------------------------
+#pragma once
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
@@ -47,13 +42,13 @@ typedef struct Hashmap
 
 void HashmapInit(Hashmap* hmap, uint32_t keySize, uint32_t itemSize, uint32_t capacity)
 {
-    capacity = MAX(capacity, 10); // ensure capacity for at least 10 elements
+    if (capacity < 10) capacity = 10; // ensure capacity for at least 10 elements
 
     // allocate space for occupancy bit array
     uint32_t occupancyRemainder = capacity & 7;
     uint32_t occupancyBytes = capacity >> 3;
-    if (occupancyRemainder != 0) occupancyBytes += 1;
-    hmap->occupancy = calloc(occupancyBytes, 1); 
+    occupancyBytes += 1 * (occupancyRemainder != 0);
+    hmap->occupancy = (uint8_t*)calloc(occupancyBytes, 1); 
 
     // allocate space for sparse data array
     hmap->data = malloc((keySize + itemSize) * capacity);
@@ -114,7 +109,7 @@ void HashmapResizeAdd(Hashmap* hmap, void* key, void* value)
         }
         probes++;
     }
-    hmap->maxProbes = MAX(hmap->maxProbes, probes + 1);
+    if (probes + 1 > hmap->maxProbes) hmap->maxProbes = probes + 1;
 }
 
 void HashmapResize(Hashmap* hmap)
@@ -127,7 +122,7 @@ void HashmapResize(Hashmap* hmap)
     hmap->capacity *= 2;
     uint32_t occupancyRemainder = hmap->capacity & 7;
     uint32_t occupancyBytes = hmap->capacity >> 3;
-    if (occupancyRemainder != 0) occupancyBytes += 1;
+    occupancyBytes += 1 * (occupancyRemainder != 0);
     hmap->occupancy = calloc(occupancyBytes, 1);
     hmap->data = malloc(hmap->capacity * (hmap->keySize + hmap->itemSize));
     hmap->maxProbes = 0;
@@ -206,7 +201,7 @@ void HashmapSet(Hashmap* hmap, void* key, void* value)
 
     uint32_t probes = 0;
     uint32_t hash = HashGeneric(key, hmap->keySize);
-    while (probes < hmap->maxProbes) {
+    while (probes < hmap->capacity) {
         uint32_t i = (hash + probes) % hmap->capacity;
 
         if (HashmapSlotPresent(hmap, i)) {
@@ -230,7 +225,7 @@ void HashmapSet(Hashmap* hmap, void* key, void* value)
         }
         probes++;
     }
-    hmap->maxProbes = MAX(hmap->maxProbes, probes + 1);
+    if (probes + 1 > hmap->maxProbes) hmap->maxProbes = probes + 1;
 }
 
 void HashmapDelete(Hashmap* hmap, void* key)
@@ -339,9 +334,10 @@ void HashmapClear(Hashmap* hmap)
     if (hmap->capacity == 0) return;
     uint32_t occupancyRemainder = hmap->capacity & 7;
     uint32_t occupancyBytes = hmap->capacity >> 3;
-    if (occupancyRemainder != 0) occupancyBytes += 1;
+    occupancyBytes += 1 * (occupancyRemainder != 0);
     memset(hmap->occupancy, 0, occupancyBytes);
     hmap->itemCount = 0;
+    hmap->maxProbes = 0;
 }
 
 void HashmapFree(Hashmap* hmap)
@@ -352,6 +348,4 @@ void HashmapFree(Hashmap* hmap)
     hmap->data = NULL;
     hmap->capacity = 0;
     hmap->itemCount = 0;
-
 }
-
