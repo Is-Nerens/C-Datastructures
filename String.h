@@ -56,6 +56,38 @@ inline void StringFree(String* str)
     }
 }
 
+uint32_t GetNextUTF8Codepoint(String string, int* i)
+{
+    char* cstr = StringCstr(string);
+    uint32_t stringLen = *(uint32_t*)string;
+    uint32_t codepoint = 0;
+    unsigned char firstByte = (unsigned char)cstr[*i];
+
+    if ((firstByte & 0x80) == 0) {
+        codepoint = firstByte;
+        *i += 1;
+    }
+    else if (*i + 1 < stringLen && (firstByte & 0xE0) == 0xC0) {
+        codepoint = (firstByte & 0x1F) << 6;
+        codepoint |= (unsigned char)(cstr[*i + 1] & 0x3F);
+        *i += 2;
+    }
+    else if (*i + 2 < stringLen && (firstByte & 0xF0) == 0xE0) {
+        codepoint = (firstByte & 0x0F) << 12;
+        codepoint |= (unsigned char)(cstr[*i + 1] & 0x3F) << 6;
+        codepoint |= (unsigned char)(cstr[*i + 2] & 0x3F);
+        *i += 3;
+    }
+    else if (*i + 3 < stringLen && (firstByte & 0xF8) == 0xF0) {
+        codepoint = (firstByte & 0x07) << 18;
+        codepoint |= (unsigned char)(cstr[*i + 1] & 0x3F) << 12;
+        codepoint |= (unsigned char)(cstr[*i + 2] & 0x3F) << 6;
+        codepoint |= (unsigned char)(cstr[*i + 3] & 0x3F);
+        *i += 4;
+    }
+    return codepoint;
+} 
+
 String StringConcat(String a, String b)
 {
     // validate strings and get metadata
@@ -95,40 +127,79 @@ int StringContains(String string, String search)
         return 0;
     }
 
-    // longest prefix-suffix
-    uint8_t* lps = (uint8_t*)calloc(searchLen, 1);
-    int j = 0;
-    int i = 1;
-    while (i < searchLen) {
-        if (search[i + 5] == search[j + 5]) {
-            j += 1; lps[i] = j; i += 1;
-        }
-        else {
-            if (j != 0) { j = lps[j - 1]; }
+    if (stringEncoding == ASCII)
+    {
+        // longest prefix-suffix
+        uint8_t* lps = (uint8_t*)calloc(searchLen, 1);
+        int j = 0;
+        int i = 1;
+        while (i < searchLen) {
+            if (search[i + 5] == search[j + 5]) {
+                j += 1; lps[i] = j; i += 1;
+            }
             else {
-                lps[i] = 0; i += 1;
+                if (j != 0) { j = lps[j - 1]; }
+                else {
+                    lps[i] = 0; i += 1;
+                }
             }
         }
+
+        // knuth-morris-pratt
+        i = 0;
+        j = 0;
+        while (i < stringLen) {
+            if (string[i + 5] == search[j + 5]) {
+                i++; j++;
+            }
+            if (j == searchLen) {
+                free(lps);
+                return 1;
+            }
+            else if (i < stringLen && string[i + 5] != search[j + 5]) {
+                if (j != 0) { j = lps[j-1]; } 
+                else { i++; }
+            }
+        }
+        free(lps);
+    }
+    else if (stringEncoding == UTF8)
+    {
+        // longest prefix-suffix
+        uint8_t* lps = (uint8_t*)calloc(searchLen, 1);
+        int j = 0;
+        int i = 1;
+        while (i < searchLen) {
+            if (search[i + 5] == search[j + 5]) {
+                j += 1; lps[i] = j; i += 1;
+            }
+            else {
+                if (j != 0) { j = lps[j - 1]; }
+                else {
+                    lps[i] = 0; i += 1;
+                }
+            }
+        }
+
+        // knuth-morris-pratt
+        i = 0;
+        j = 0;
+        while (i < stringLen) {
+            if (string[i + 5] == search[j + 5]) {
+                i++; j++;
+            }
+            if (j == searchLen) {
+                free(lps);
+                return 1;
+            }
+            else if (i < stringLen && string[i + 5] != search[j + 5]) {
+                if (j != 0) { j = lps[j-1]; } 
+                else { i++; }
+            }
+        }
+        free(lps);
     }
 
-    // knuth-morris-pratt
-    i = 0;
-    j = 0;
-    while (i < stringLen) {
-        if (string[i + 5] == search[j + 5]) {
-            i++; j++;
-        }
-        if (j == searchLen) {
-            free(lps);
-            return 1;
-        }
-        else if (i < stringLen && string[i + 5] != search[j + 5]) {
-            if (j != 0) { j = lps[j-1]; } 
-            else { i++; }
-        }
-    }
-
-    free(lps);
     return 0;
 }
 
@@ -252,40 +323,8 @@ void StringEncodeUTF32(String* string)
         // encode
         uint32_t utf32Len = 0;
         int i = 0;
-        while (i < stringLen)
-        {
-            uint32_t codepoint = 0;
-            unsigned char firstByte = (unsigned char)cstr[i];
-
-            if ((firstByte & 0x80) == 0) {
-                codepoint = firstByte;
-                i++;
-            }
-            else if ((firstByte & 0xE0) == 0xC0) {
-                if (i + 1 >= stringLen) break;
-                codepoint = (firstByte & 0x1F) << 6;
-                codepoint |= (unsigned char)(cstr[i + 1] & 0x3F);
-                i += 2;
-            }
-            else if ((firstByte & 0xF0) == 0xE0) {
-                if (i + 2 >= stringLen) break;
-                codepoint = (firstByte & 0x0F) << 12;
-                codepoint |= (unsigned char)(cstr[i + 1] & 0x3F) << 6;
-                codepoint |= (unsigned char)(cstr[i + 2] & 0x3F);
-                i += 3;
-            }
-            else if ((firstByte & 0xF8) == 0xF0) {
-                if (i + 3 >= stringLen) break;
-                codepoint = (firstByte & 0x07) << 18;
-                codepoint |= (unsigned char)(cstr[i + 1] & 0x3F) << 12;
-                codepoint |= (unsigned char)(cstr[i + 2] & 0x3F) << 6;
-                codepoint |= (unsigned char)(cstr[i + 3] & 0x3F);
-                i += 4;
-            }
-            else {
-                free(encoded);
-                return;
-            }
+        while (i < stringLen) {
+            uint32_t codepoint = GetNextUTF8Codepoint(*string, &i);
             memcpy(encoded + 5 + utf32Len, &codepoint, 4);
             utf32Len += 4;
         }
