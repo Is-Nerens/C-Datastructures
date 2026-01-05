@@ -67,7 +67,7 @@ void HashmapInit(Hashmap* hmap, uint32_t keySize, uint32_t itemSize, uint32_t ca
 }
 
 // FNV algorithm https://github.com/aappleby/smhasher/blob/master/src/Hashes.cpp
-static uint32_t HashGeneric(void* key, uint32_t len) // FNV algorithm https://github.com/aappleby/smhasher/blob/master/src/Hashes.cpp
+static uint32_t HashGeneric(void* key, uint32_t len)
 {
     uint32_t hash = 2166136261u;
     uint8_t* p = (uint8_t*)key;
@@ -354,3 +354,4 @@ void HashmapFree(Hashmap* hmap)
     hmap->itemCount = 0;
 
 }
+
