@@ -70,9 +70,6 @@ void* DynamicArrayPushEmpty(DynamicArray* array)
 
 void DynamicArrayDeleteBackfill(DynamicArray* array, uint32_t index)
 {
-    if (index >= array->size) {
-        return;
-    }
     if (index == array->size - 1) {
         array->size--;
         return;
@@ -85,9 +82,6 @@ void DynamicArrayDeleteBackfill(DynamicArray* array, uint32_t index)
 
 void DynamicArrayDeleteBackshift(DynamicArray* array, uint32_t index)
 {
-    if (index >= array->size) {
-        return;
-    }
     if (index < array->size-1)
     {
         void* dest = (char*)array->data + (index * array->elementSize);
@@ -98,8 +92,12 @@ void DynamicArrayDeleteBackshift(DynamicArray* array, uint32_t index)
     array->size--;
 }
 
+
 void DynamicArrayDeleteBackfillSafe(DynamicArray* array, uint32_t index)
 {
+    if (index >= array->size) {
+        return;
+    }
     if (index == array->size - 1) {
         array->size--;
         return;
@@ -112,6 +110,9 @@ void DynamicArrayDeleteBackfillSafe(DynamicArray* array, uint32_t index)
 
 void DynamicArrayDeleteBackshiftSafe(DynamicArray* array, uint32_t index)
 {
+    if (index >= array->size) {
+        return;
+    }
     if (index < array->size-1)
     {
         void* dest = (char*)array->data + (index * array->elementSize);
