@@ -277,12 +277,16 @@ String StringReplaceFirst(String string, String target, String replacement)
 
 String StringRemoveSuffix(String string, String suffix)
 {
+    // critical errors
     if (string == NULL || 
         suffix == NULL || 
         StringLen(suffix) == 0 || 
         StringLen(suffix) > StringLen(string)) { 
         return NULL;
     }
+    char stringEncoding = string[3];
+    char bEncoding = suffix[3];
+    if (stringEncoding != suffixEncoding) return NULL;
 
     // check if string ends with suffix
     if (memcmp(StringCstr(string) + StringLen(string) - StringLen(suffix), StringCstr(suffix), StringLen(suffix)) != 0) {
@@ -450,5 +454,6 @@ void StringEncodeUTF32(String* string)
         return;
     }
 }
+
 
 
