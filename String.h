@@ -151,16 +151,24 @@ String StringConcat(String a, String b)
     return output;
 }
 
+inline String StringCopy(String string)
+{
+    uint32_t bytes = StringLen(string) + 4 + 1;
+    String copy = malloc(bytes);
+    memcpy(copy, string, bytes);
+    return copy;
+}
+
 int StringContains(String string, String search)
 {
     // validate strings and get metadata
-    if (string == NULL || search == NULL) return 0;
+    if (string == NULL || search == NULL) return -1;
     uint32_t stringLen = StringLen(string);
     uint32_t searchLen = StringLen(search);
     char stringEncoding = string[3];
     char searchEncoding = search[3];
     if (stringEncoding != searchEncoding || stringLen == 0 || searchLen == 0) {
-        return 0;
+        return -1;
     }
     char* stringCstr = StringCstr(string);
     char* searchCstr = StringCstr(search);
@@ -192,7 +200,7 @@ int StringContains(String string, String search)
             }
             if (j == searchLen) {
                 free(lps);
-                return 1;
+                return i - j;
             }
             else if (i < stringLen && stringCstr[i] != searchCstr[j]) {
                 if (j != 0) { j = lps[j-1]; } 
@@ -231,7 +239,7 @@ int StringContains(String string, String search)
             }
             if (j == searchCount) {
                 free(lps);
-                return 1;
+                return i - j;
             }
             else if (i < stringCount && GetUTF32Codepoint(string, i) != GetUTF32Codepoint(search, j)) {
                 if (j != 0) { j = lps[j-1]; } 
@@ -240,7 +248,60 @@ int StringContains(String string, String search)
         }
         free(lps);
     }
-    return 0;
+    return -1;
+}
+
+String StringReplaceFirst(String string, String target, String replacement)
+{
+    if (replacement == NULL) {
+        return NULL;
+    }
+
+    int match = StringContains(string, target); // checks if string and target is NULL
+    if (match == -1) return NULL;
+
+    // construct result string
+    uint32_t length = StringLen(string) - StringLen(target) + StringLen(replacement);
+    String result = malloc(length + 4 + 1);
+    if (!result) return NULL;
+    memcpy(StringCstr(result), StringCstr(string), match);
+    memcpy(StringCstr(result) + match, StringCstr(replacement), StringLen(replacement));
+    memcpy(StringCstr(result) + match + StringLen(replacement), StringCstr(string) + match + StringLen(target));
+    result[0] = (length >> 16) & 0xFF;
+    result[1] = (length >> 8) & 0xFF;
+    result[2] = length & 0xFF;  
+    result[3] = string[3];
+    result[length + 4] = '\0';
+    return result;
+}
+
+String StringRemoveSuffix(String string, String suffix)
+{
+    if (string == NULL || 
+        suffix == NULL || 
+        StringLen(suffix) == 0 || 
+        StringLen(suffix) > StringLen(string)) { 
+        return NULL;
+    }
+
+    // check if string ends with suffix
+    if (memcmp(strCstr + StringLen(string) - StringLen(suffix), StringCstr(suffix), StringLen(suffix)) != 0) {
+        return StringCopy(string);
+    }
+
+    // construct new string without suffix
+    uint32_t newLength = StringLen(string) - StringLen(suffix);
+    String result = malloc(newLength + 4 + 1);
+    if (!result) return NULL;
+    memcpy(StringCstr(result), StringCstr(string), newLength);
+
+    // set header
+    result[0] = (newLength >> 16) & 0xFF;
+    result[1] = (newLength >> 8) & 0xFF;
+    result[2] = newLength & 0xFF;
+    result[3] = string[3];
+    result[newLength + 4] = '\0';
+    return result;
 }
 
 int StringEquals(String a, String b)
@@ -389,3 +450,4 @@ void StringEncodeUTF32(String* string)
         return;
     }
 }
+
