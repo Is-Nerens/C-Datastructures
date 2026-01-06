@@ -1,26 +1,3 @@
-// MIT License
-// Copyright (c) 2026 Arran Stevens
-
-// Permission is hereby granted, free of charge, to any person obtaining a copy
-// of this software and associated documentation files (the "Software"), to deal
-// in the Software without restriction, including without limitation the rights
-// to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-// copies of the Software, and to permit persons to whom the Software is
-// furnished to do so, subject to the following conditions:
-
-// The above copyright notice and this permission notice shall be included in all
-// copies or substantial portions of the Software.
-
-// THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-// IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-// FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-// AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-// LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-// OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-// SOFTWARE.
-
-
-
 // DATA LAYOUT
 // ASCII/UTF8 [length: 3 bytes][encoding: 1 byte][data][\n]
 // UTF32      [header: 3 bytes][encoding: 1 byte][data]
@@ -46,6 +23,18 @@ String StringCreate(char* str)
     result[2] = length & 0xFF;  
     result[3] = ASCII;
     result[length + 4] = '\0';
+    return result;
+}
+
+String StringCreateBuffer(uint32_t bytes)
+{
+    String result = malloc(bytes + 4 + 1);
+    if (!result) return NULL;
+    result[0] = (bytes >> 16) & 0xFF;
+    result[1] = (bytes >> 8) & 0xFF;
+    result[2] = bytes & 0xFF;  
+    result[3] = ASCII;
+    result[bytes + 4] = '\0';
     return result;
 }
 
@@ -177,7 +166,7 @@ int StringContains(String string, String search)
         int j = 0;
         int i = 1;
         while (i < searchLen) {
-            if (stringCstr[i] == searchCstr[j]) {
+            if (searchCstr[i] == searchCstr[j]) {
                 j += 1; lps[i] = j; i += 1;
             }
             else {
@@ -255,7 +244,9 @@ String StringReplaceFirst(String string, String target, String replacement)
     }
 
     int match = StringContains(string, target); // checks if string and target is NULL
-    if (match == -1) return NULL;
+    if (match == -1) {
+        return NULL;
+    }
 
     // construct result string
     uint32_t length = StringLen(string) - StringLen(target) + StringLen(replacement);
@@ -263,7 +254,7 @@ String StringReplaceFirst(String string, String target, String replacement)
     if (!result) return NULL;
     memcpy(StringCstr(result), StringCstr(string), match);
     memcpy(StringCstr(result) + match, StringCstr(replacement), StringLen(replacement));
-    memcpy(StringCstr(result) + match + StringLen(replacement), StringCstr(string) + match + StringLen(target));
+    memcpy(StringCstr(result) + match + StringLen(replacement), StringCstr(string) + match + StringLen(target), StringLen(string) - match - StringLen(target));
     result[0] = (length >> 16) & 0xFF;
     result[1] = (length >> 8) & 0xFF;
     result[2] = length & 0xFF;  
@@ -282,7 +273,7 @@ String StringRemoveSuffix(String string, String suffix)
         return NULL;
     }
     char stringEncoding = string[3];
-    char bEncoding = suffix[3];
+    char suffixEncoding = suffix[3];
     if (stringEncoding != suffixEncoding) return NULL;
 
     // check if string ends with suffix
@@ -451,7 +442,3 @@ void StringEncodeUTF32(String* string)
         return;
     }
 }
-
-
-
-
