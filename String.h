@@ -285,7 +285,7 @@ String StringRemoveSuffix(String string, String suffix)
     }
 
     // check if string ends with suffix
-    if (memcmp(strCstr + StringLen(string) - StringLen(suffix), StringCstr(suffix), StringLen(suffix)) != 0) {
+    if (memcmp(StringCstr(string) + StringLen(string) - StringLen(suffix), StringCstr(suffix), StringLen(suffix)) != 0) {
         return StringCopy(string);
     }
 
@@ -450,4 +450,5 @@ void StringEncodeUTF32(String* string)
         return;
     }
 }
+
 
