@@ -63,12 +63,9 @@ String StringCreateUTF8(char* str)
     return result;
 }
 
-inline void StringFree(String* str)
+inline void StringFree(String str)
 {
-    if (str && *str) {
-        free(*str);
-        *str = NULL;
-    }
+    free(str);
 }
 
 inline char* StringCstr(String str)
@@ -454,6 +451,7 @@ void StringEncodeUTF32(String* string)
         return;
     }
 }
+
 
 
 
