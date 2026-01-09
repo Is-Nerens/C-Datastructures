@@ -3,13 +3,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-typedef struct StringmapChunk
-{
-    char* buffer;
-    uint32_t capacity;
-    uint32_t used;
-} StringmapChunk;
-
 typedef struct Stringmap
 {
     uint8_t* occupancy;
@@ -270,4 +263,5 @@ void StringmapDelete(Stringmap* map, char* key)
     }
 
     map->itemCount--;
+
 }
