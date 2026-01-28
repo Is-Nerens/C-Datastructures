@@ -325,7 +325,8 @@ int HashmapIteratorNext(HashmapIterator* it, void** keyOut, void** valOut)
         it->index++;
     }
 
-    // done
+    // done -> reset index
+    it->index = 0;
     return 0;
 }
 
@@ -350,3 +351,4 @@ void HashmapFree(Hashmap* hmap)
     hmap->capacity = 0;
     hmap->itemCount = 0;
 }
+
