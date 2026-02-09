@@ -13,6 +13,12 @@ typedef struct Stringmap
     uint32_t maxProbes;
 } Stringmap;
 
+typedef struct StringmapIterator
+{
+    Stringmap* map;
+    uint32_t index;
+} StringmapIterator;
+
 void StringmapFree(Stringmap* map)
 {
     if (!map) return;
@@ -264,4 +270,41 @@ void StringmapDelete(Stringmap* map, char* key)
 
     map->itemCount--;
 
+}
+
+
+StringmapIterator StringmapCreateIterator(Stringmap* map)
+{
+    StringmapIterator iterator;
+    iterator.map = map;
+    iterator.index = 0;
+    return iterator;
+}
+
+int StringmapIteratorNext(StringmapIterator* it, char** keyOut, void** valOut)
+{
+    Stringmap* map = it->map;
+
+    // no items -> done
+    if (map->itemCount == 0) {
+        return 0;
+    }
+
+    while (it->index < map->capacity) {
+
+        // found item -> set key, value
+        if (StringmapSlotPresent(map, it->index)) {
+            char* base = (char*)map->map + it->index * (sizeof(char*) + map->itemSize);
+            char* storedKey = *(char**)base;
+            it->index++;
+            *keyOut = storedKey;
+            *valOut = (char*)base + sizeof(char*);
+            return 1;
+        }
+        it->index++;
+    }
+
+    // done -> reset index
+    it->index = 0;
+    return 0;
 }
