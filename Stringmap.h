@@ -276,6 +276,29 @@ void StringmapDelete(Stringmap* map, char* key)
 
 }
 
+void StringmapClear(Stringmap* map)
+{
+    if (!map || map->itemCount == 0)
+        return;
+
+    // Free all allocated keys
+    for (uint32_t i = 0; i < map->capacity; i++) {
+        if (StringmapSlotPresent(map, i)) {
+            char* base = (char*)map->map + i * (sizeof(char*) + map->itemSize);
+            char* storedKey = *(char**)base;
+            free(storedKey);
+        }
+    }
+
+    // Reset occupancy bits
+    uint32_t occupancyBytes = (map->capacity + 7) >> 3;
+    memset(map->occupancy, 0, occupancyBytes);
+    memset(map->map, 0, (sizeof(char*) + map->itemSize) * map->capacity);
+    map->itemCount = 0;
+    map->maxProbes = 1;
+}
+
+
 
 StringmapIterator StringmapCreateIterator(Stringmap* map)
 {
