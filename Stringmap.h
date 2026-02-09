@@ -131,19 +131,21 @@ int StringmapGrowRehash(Stringmap* map)
     return 1;
 }
 
-int StringmapSet(Stringmap* map, char* key, void* value)
+void* StringmapSet(Stringmap* map, char* key, void* value)
 {
+    char* stored = NULL;
+
     // resize if surpassed max load factor
-    if (map->itemCount * 10 > map->mapCapacity * 7) {
+    if (map->itemCount * 10 > map->capacity * 7) {
         if (!StringmapGrowRehash(map)) {
-            return 0;
+            return stored;
         }
     }
 
     uint32_t probes = 0;
     uint32_t hash = StringmapHash(key);
-    while(probes < map->mapCapacity) {
-        uint32_t i = (hash + probes) % map->mapCapacity;
+    while(probes < map->capacity) {
+        uint32_t i = (hash + probes) % map->capacity;
 
         // if key exists -> update value
         if (StringmapSlotPresent(map, i)) {
@@ -151,7 +153,8 @@ int StringmapSet(Stringmap* map, char* key, void* value)
             char* storedKey = *(char**)base;
             if (strcmp(key, storedKey) == 0) {
                 memcpy(base + sizeof(char*), value, map->itemSize);
-                return 1;
+                stored = (char*)base + sizeof(char*);
+                return stored;
             }
         }
         else
@@ -160,18 +163,19 @@ int StringmapSet(Stringmap* map, char* key, void* value)
             uint32_t len = strlen(key);
             char* storedKey = (char*)malloc(len + 1);
             memcpy(storedKey, key, len); storedKey[len] = '\0';
-            if (storedKey == NULL) return 0;
+            if (storedKey == NULL) return stored;
 
             char* base = (char*)map->map + i * (sizeof(char*) + map->itemSize);
             memcpy(base, &storedKey, sizeof(char*));
             memcpy(base + sizeof(char*), value, map->itemSize);
             map->itemCount++;
+            stored = (char*)base + sizeof(char*);
             break;
         }
         probes++;
     }
     if (probes + 1 > map->maxProbes) map->maxProbes = probes + 1;
-    return 1;
+    return stored;
 }
 
 void* StringmapGet(Stringmap* map, char* key)
@@ -308,4 +312,5 @@ int StringmapIteratorNext(StringmapIterator* it, char** keyOut, void** valOut)
     it->index = 0;
     return 0;
 }
+
 
