@@ -32,7 +32,7 @@ void StringmapFree(Stringmap* map)
     map->maxProbes = 0;
 }
 
-int StringmapInit(Stringmap* map, uint32_t itemSize, uint32_t mapCapacity, uint32_t chunkCapacity)
+int StringmapInit(Stringmap* map, uint32_t itemSize, uint32_t mapCapacity)
 {
     // create hashmap
     map->mapCapacity = mapCapacity;
@@ -308,3 +308,4 @@ int StringmapIteratorNext(StringmapIterator* it, char** keyOut, void** valOut)
     it->index = 0;
     return 0;
 }
+
